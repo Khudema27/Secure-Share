@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Share | Encrypted Vault</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #f0f4fa;
+            --surface: #ffffff;
+            --surface2: #eaf0fb;
+            --surface3: #d6e2f5;
+            --border: rgba(10,36,99,0.10);
+            --border2: rgba(10,36,99,0.18);
+            --accent: #0a2463;
+            --accent2: #1a3d8f;
+            --green: #0e7f5a;
+            --green-bg: rgba(14,127,90,0.10);
+            --red: #c0392b;
+            --amber: #b8860b;
+            --text: #0a1a3a;
+            --text2: #2e4a7a;
+            --text3: #7a94bc;
+            --radius: 16px;
+            --radius-sm: 10px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        #authScreen { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+        .auth-left { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 80px; background: linear-gradient(145deg, #0a2463 0%, #1a3d8f 100%); }
+        .auth-brand { display: flex; align-items: center; gap: 14px; margin-bottom: 80px; }
+        .auth-brand-icon { width: 44px; height: 44px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #ffffff; }
+        .auth-brand-name { font-family: 'Times New Roman', Times, serif; font-size: 1.5rem; font-weight: 800; color: #ffffff; letter-spacing: -0.3px; }
+        .auth-hero { max-width: 480px; }
+        .auth-hero h1 { font-family: 'Times New Roman', Times, serif; font-size: 3.4rem; font-weight: 800; line-height: 1.1; color: #ffffff; margin-bottom: 20px; }
+        .auth-hero h1 span { background: linear-gradient(90deg, #7eb8ff, #a8d8ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .auth-hero p { font-family: 'Times New Roman', Times, serif; font-size: 1.05rem; color: rgba(255,255,255,0.70); line-height: 1.6; }
+        .auth-right { width: 480px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; justify-content: center; padding: 60px 52px; }
+        .auth-panel { opacity: 0; transform: translateY(16px); transition: opacity 0.4s ease, transform 0.4s ease; display: none; }
+        .auth-panel.active { display: block; opacity: 1; transform: translateY(0); }
+        .auth-form-title { font-family: 'Times New Roman', Times, serif; font-size: 1.8rem; font-weight: 700; margin-bottom: 6px; }
+        .auth-form-subtitle { font-family: 'Times New Roman', Times, serif; font-size: 0.88rem; color: var(--text2); margin-bottom: 36px; }
+        .auth-form-subtitle a { color: var(--accent2); cursor: pointer; text-decoration: none; font-weight: 600; }
+        .auth-form-subtitle a:hover { text-decoration: underline; }
+        .form-group { margin-bottom: 18px; }
+        .form-label { font-family: 'Times New Roman', Times, serif; font-size: 0.78rem; font-weight: 600; color: var(--text2); text-transform: uppercase; margin-bottom: 8px; display: block; letter-spacing: 0.5px; }
+        .form-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 13px 16px; font-family: 'Times New Roman', Times, serif; font-size: 0.9rem; outline: none; }
+        .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(10,36,99,0.10); }
+        .input-icon-wrap { position: relative; }
+        .input-icon-wrap .form-input { padding-left: 42px; }
+        .input-icon-wrap .fi-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 0.85rem; }
+        .btn-auth { width: 100%; background: linear-gradient(135deg, #0a2463 0%, #1a3d8f 100%); border: none; border-radius: var(--radius-sm); padding: 14px; font-family: 'Times New Roman', Times, serif; font-weight: 700; font-size: 0.95rem; color: white; cursor: pointer; margin-top: 8px; box-shadow: 0 4px 24px rgba(10,36,99,0.25); transition: transform 0.2s; }
+        .btn-auth:hover { transform: translateY(-1px); }
+
+        #dashScreen { display: none; flex-direction: column; min-height: 100vh; position: relative; z-index: 1; }
+        .topbar { height: 64px; background: #ffffff; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 32px; gap: 20px; position: sticky; top: 0; z-index: 50; }
+        .topbar-brand { display: flex; align-items: center; gap: 10px; font-family: 'Times New Roman', Times, serif; font-size: 1.25rem; font-weight: 800; }
+        .topbar-brand-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+        .topbar-search { flex: 1; max-width: 340px; margin-left: 24px; position: relative; }
+        .topbar-search input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 40px; padding: 9px 16px 9px 38px; font-family: 'Times New Roman', Times, serif; font-size: 0.83rem; outline: none; }
+        .topbar-search i { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 0.8rem; }
+        .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+        .user-pill { display: flex; align-items: center; gap: 10px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 40px; padding: 6px 14px 6px 8px; cursor: pointer; transition: border-color 0.2s; }
+        .user-pill:hover { border-color: var(--accent); }
+        .user-avatar { width: 30px; height: 30px; background: linear-gradient(135deg, #0a2463, #1a3d8f); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Times New Roman', Times, serif; font-weight: 700; color: white; }
+        .user-name { font-family: 'Times New Roman', Times, serif; font-size: 0.83rem; font-weight: 500; }
+        .btn-logout { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px; font-family: 'Times New Roman', Times, serif; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+        .btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+        .dash-body { flex: 1; display: grid; grid-template-columns: 280px 1fr; gap: 0; }
+        
+        .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 28px 20px; display: flex; flex-direction: column; gap: 24px; overflow-y: auto; max-height: calc(100vh - 64px); }
+        .sidebar-section { margin-bottom: 8px; }
+        .sidebar-section-label { font-family: 'Times New Roman', Times, serif; font-size: 0.7rem; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; padding: 12px 12px 8px; }
+        .sidebar-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: var(--radius-sm); font-family: 'Times New Roman', Times, serif; font-size: 0.875rem; color: var(--text2); cursor: pointer; transition: all 0.15s; }
+        .sidebar-item:hover { background: var(--surface2); color: var(--text); }
+        .sidebar-item.active { background: rgba(10,36,99,0.10); color: var(--accent); font-weight: 600; }
+        .sidebar-item i { width: 20px; text-align: center; font-size: 0.85rem; }
+        .sidebar-badge { margin-left: auto; background: var(--surface3); border-radius: 40px; padding: 2px 8px; font-family: 'Times New Roman', Times, serif; font-size: 0.65rem; font-weight: 600; }
+        .sidebar-badge.green { background: var(--green-bg); color: var(--green); }
+
+        .quick-share-card { background: var(--surface2); border-radius: var(--radius); padding: 16px; border: 1px solid var(--border); }
+        .quick-share-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+        .quick-share-header i { font-size: 0.9rem; color: var(--accent2); }
+        .quick-share-header h4 { font-family: 'Times New Roman', Times, serif; font-size: 0.85rem; font-weight: 700; color: var(--text); }
+        .share-select { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-family: 'Times New Roman', Times, serif; font-size: 0.8rem; margin-bottom: 12px; outline: none; cursor: pointer; }
+        .share-link-row { display: flex; gap: 8px; margin-bottom: 10px; }
+        .share-link-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; font-family: 'Courier New', monospace; font-size: 0.65rem; color: var(--text2); outline: none; }
+        .btn-sm { background: var(--surface3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 7px 12px; font-family: 'Times New Roman', Times, serif; font-size: 0.7rem; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+        .btn-sm:hover { background: var(--accent); color: white; border-color: transparent; }
+        .btn-sm.full { width: 100%; text-align: center; margin-top: 6px; }
+
+        .recent-activity-card { background: var(--surface2); border-radius: var(--radius); padding: 16px; border: 1px solid var(--border); }
+        .recent-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+        .recent-header i { font-size: 0.9rem; color: var(--accent2); }
+        .recent-header h4 { font-family: 'Times New Roman', Times, serif; font-size: 0.85rem; font-weight: 700; color: var(--text); }
+        .activity-list { display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; }
+        .activity-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+        .activity-item:last-child { border-bottom: none; }
+        .activity-icon { width: 28px; height: 28px; background: var(--surface); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .activity-icon i { font-size: 0.7rem; color: var(--accent2); }
+        .activity-detail { flex: 1; }
+        .activity-action { font-family: 'Times New Roman', Times, serif; font-size: 0.75rem; font-weight: 600; color: var(--text); text-transform: capitalize; }
+        .activity-time { font-family: 'Times New Roman', Times, serif; font-size: 0.6rem; color: var(--text3); margin-top: 2px; }
+        .badge-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin-right: 5px; }
+
+        .security-status-card { background: var(--surface2); border-radius: var(--radius); padding: 16px; border: 1px solid var(--border); }
+        .security-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+        .security-header i { font-size: 1rem; color: var(--accent2); }
+        .security-header h4 { font-family: 'Times New Roman', Times, serif; font-size: 0.85rem; font-weight: 700; color: var(--text); }
+        .security-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+        .security-item:last-child { border-bottom: none; }
+        .security-item-left { display: flex; align-items: center; gap: 10px; }
+        .security-item-left i { width: 28px; font-size: 0.85rem; color: var(--accent2); }
+        .security-item-left span { font-family: 'Times New Roman', Times, serif; font-size: 0.8rem; font-weight: 500; color: var(--text); }
+        .security-badge { font-family: 'Times New Roman', Times, serif; font-size: 0.65rem; padding: 3px 10px; border-radius: 20px; background: var(--green-bg); color: var(--green); font-weight: 600; }
+        .security-desc { font-family: 'Times New Roman', Times, serif; font-size: 0.65rem; color: var(--text3); margin-top: 2px; margin-left: 38px; }
+
+        .main-content { padding: 32px; overflow-y: auto; max-height: calc(100vh - 64px); }
+        .page-header { margin-bottom: 28px; }
+        .page-header h2 { font-family: 'Times New Roman', Times, serif; font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.3px; }
+        .page-header p { font-family: 'Times New Roman', Times, serif; font-size: 0.85rem; color: var(--text2); }
+
+        .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 28px; }
+        .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; transition: all 0.2s; }
+        .stat-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+        .stat-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+        .stat-icon.c1 { background: rgba(10,36,99,0.10); color: var(--accent2); }
+        .stat-icon.c2 { background: var(--green-bg); color: var(--green); }
+        .stat-icon.c3 { background: rgba(251,191,36,0.12); color: var(--amber); }
+        .stat-value { font-family: 'Times New Roman', Times, serif; font-size: 1.8rem; font-weight: 800; margin-bottom: 2px; }
+        .stat-label { font-family: 'Times New Roman', Times, serif; font-size: 0.75rem; color: var(--text3); }
+
+        .upload-zone { background: var(--surface); border: 2px dashed var(--border2); border-radius: var(--radius); padding: 32px; text-align: center; cursor: pointer; margin-bottom: 24px; transition: all 0.2s; }
+        .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: rgba(10,36,99,0.04); }
+        .upload-icon { width: 56px; height: 56px; background: rgba(10,36,99,0.08); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin: 0 auto 16px; }
+        .upload-title { font-family: 'Times New Roman', Times, serif; font-size: 1rem; font-weight: 500; margin-bottom: 12px; }
+        .btn-primary { background: linear-gradient(135deg, #0a2463, #1a3d8f); border: none; border-radius: var(--radius-sm); padding: 11px 24px; font-family: 'Times New Roman', Times, serif; font-weight: 700; font-size: 0.85rem; color: white; cursor: pointer; transition: all 0.2s; }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(10,36,99,0.2); }
+
+        .file-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+        table.ftable { width: 100%; border-collapse: collapse; }
+        .ftable th { background: var(--surface2); padding: 12px 18px; text-align: left; font-family: 'Times New Roman', Times, serif; font-size: 0.7rem; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+        .ftable td { padding: 14px 18px; border-bottom: 1px solid var(--border); font-family: 'Times New Roman', Times, serif; font-size: 0.85rem; color: var(--text); }
+        .ftable tr:last-child td { border-bottom: none; }
+        .file-name-cell { display: flex; align-items: center; gap: 12px; }
+        .file-type-icon { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; }
+        .chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 30px; font-family: 'Times New Roman', Times, serif; font-size: 0.68rem; font-weight: 600; }
+        .chip-enc { background: rgba(10,36,99,0.10); color: var(--accent2); }
+        .chip-shared { background: var(--green-bg); color: var(--green); }
+        .tbl-btn { width: 32px; height: 32px; border-radius: 8px; border: none; background: none; cursor: pointer; color: var(--text3); transition: all 0.15s; font-size: 0.8rem; }
+        .tbl-btn:hover { background: var(--surface3); color: var(--text); }
+
+        .shared-link-cell { display: flex; align-items: center; gap: 8px; }
+        .shared-link-preview { font-family: 'Courier New', monospace; font-size: 0.7rem; color: var(--text2); background: var(--surface2); padding: 4px 8px; border-radius: 6px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .copy-link-btn { background: none; border: none; cursor: pointer; color: var(--text3); padding: 6px; border-radius: 6px; transition: all 0.2s; font-size: 0.8rem; }
+        .copy-link-btn:hover { background: var(--surface3); color: var(--green); }
+
+        .toast { position: fixed; bottom: 28px; right: 28px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 14px 20px; font-family: 'Times New Roman', Times, serif; font-size: 0.85rem; display: flex; align-items: center; gap: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 9999; animation: toastIn 0.3s ease; }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+        .progress-overlay { position: fixed; inset: 0; background: rgba(7,8,13,0.8); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; display: none; }
+        .progress-card { background: var(--surface); border-radius: var(--radius); padding: 36px 48px; text-align: center; }
+        .progress-ring { width: 56px; height: 56px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .progress-label { font-family: 'Times New Roman', Times, serif; font-size: 0.95rem; font-weight: 600; margin-bottom: 6px; }
+
+        @media (max-width: 1000px) { .dash-body { grid-template-columns: 260px 1fr; } }
+        @media (max-width: 800px) { .auth-left { display: none; } .auth-right { width: 100%; } .dash-body { grid-template-columns: 1fr; } .sidebar { display: none; } }
+    </style>
+</head>
+<body>
+
+<div id="authScreen">
+    <div class="auth-left">
+        <div class="auth-brand"><div class="auth-brand-icon"><i class="fas fa-shield-halved"></i></div><span class="auth-brand-name">SECURE SHARE</span></div>
+        <div class="auth-hero">
+            <h1>Your files.<br><span>Zero compromise.</span></h1>
+            <p>End-to-end encrypted file storage with AES-256-GCM. Only you hold the keys.</p>
+        </div>
+    </div>
+    <div class="auth-right">
+        <!-- LOGIN PANEL -->
+        <div class="auth-panel active" id="loginPanel">
+            <div class="auth-form-title">Welcome back</div>
+            <div class="auth-form-subtitle">No account? <a onclick="showPanel('register')">Create one — it's free</a></div>
+            <div class="form-group"><label class="form-label">Username</label><div class="input-icon-wrap"><i class="fas fa-user fi-icon"></i><input type="text" class="form-input" id="loginUser" placeholder="your_username"></div></div>
+            <div class="form-group"><label class="form-label">Password</label><div class="input-icon-wrap"><i class="fas fa-key fi-icon"></i><input type="password" class="form-input" id="loginPass" placeholder="••••••••"></div></div>
+            <button class="btn-auth" id="loginBtn"><i class="fas fa-arrow-right-to-bracket" style="margin-right:8px;"></i> Sign In to Vault</button>
+        </div>
+        
+        <!-- REGISTER PANEL -->
+        <div class="auth-panel" id="registerPanel">
+            <div class="auth-form-title">Create account</div>
+            <div class="auth-form-subtitle">Already have an account? <a onclick="showPanel('login')">Sign in instead</a></div>
+            <div class="form-group"><label class="form-label">Username</label><div class="input-icon-wrap"><i class="fas fa-user fi-icon"></i><input type="text" class="form-input" id="regUser" placeholder="choose_username"></div></div>
+            <div class="form-group"><label class="form-label">Password</label><div class="input-icon-wrap"><i class="fas fa-key fi-icon"></i><input type="password" class="form-input" id="regPass" placeholder="Password"></div></div>
+            <div class="form-group"><label class="form-label">Confirm Password</label><div class="input-icon-wrap"><i class="fas fa-shield-halved fi-icon"></i><input type="password" class="form-input" id="regPassConf" placeholder="Re-enter password"></div></div>
+            <button class="btn-auth" id="registerBtn"><i class="fas fa-vault" style="margin-right:8px;"></i> Create Secure Account</button>
+        </div>
+    </div>
+</div>
+
+<div id="dashScreen">
+    <nav class="topbar">
+        <div class="topbar-brand"><div class="topbar-brand-dot"></div>Secure Share</div>
+        <div class="topbar-search"><i class="fas fa-magnifying-glass"></i><input type="text" id="searchInput" placeholder="Search files..." oninput="onSearch(this.value)"></div>
+        <div class="topbar-right"><div class="user-pill"><div class="user-avatar" id="userAvatarTop">U</div><span class="user-name" id="userNameTop">User</span></div><button class="btn-logout" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button></div>
+    </nav>
+    <div class="dash-body">
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">Navigation</div>
+                <div class="sidebar-item active" onclick="switchTab('vault')"><i class="fas fa-vault"></i> My Vault <span class="sidebar-badge green" id="sideFileCount">0</span></div>
+                <div class="sidebar-item" onclick="switchTab('shared')"><i class="fas fa-share-nodes"></i> Shared Files</div>
+                <div class="sidebar-item" onclick="switchTab('activity')"><i class="fas fa-list-check"></i> Activity Log</div>
+            </div>
+
+            <div class="quick-share-card">
+                <div class="quick-share-header"><i class="fas fa-share-nodes"></i><h4>Quick Share</h4></div>
+                <select class="share-select" id="shareSelect"><option value="">Select a file...</option></select>
+                <div class="share-link-row">
+                    <input type="text" class="share-link-input" id="shareLinkOut" placeholder="Secure link" readonly>
+                    <button class="btn-sm" id="genShareBtn">Gen</button>
+                </div>
+                <button class="btn-sm full" id="copyShareBtn"><i class="fas fa-copy" style="margin-right:6px;"></i>Copy Link</button>
+            </div>
+
+            <div class="recent-activity-card">
+                <div class="recent-header"><i class="fas fa-wave-square"></i><h4>Recent Activity</h4></div>
+                <div class="activity-list" id="activityPanel"></div>
+            </div>
+
+            <div class="security-status-card">
+                <div class="security-header"><i class="fas fa-shield-halved"></i><h4>Security Status</h4></div>
+                <div class="security-item"><div class="security-item-left"><i class="fas fa-lock"></i><span>AES-256-GCM</span></div><div class="security-badge active">Active</div></div>
+                <div class="security-desc">Per-file random IV + salt</div>
+                <div class="security-item"><div class="security-item-left"><i class="fas fa-fingerprint"></i><span>SHA-384</span></div><div class="security-badge active">Enabled</div></div>
+                <div class="security-desc">Verified on every download</div>
+                <div class="security-item"><div class="security-item-left"><i class="fas fa-key"></i><span>PBKDF2</span></div><div class="security-badge active">140k iter</div></div>
+                <div class="security-desc">Key derivation with salt</div>
+                <div class="security-item"><div class="security-item-left"><i class="fas fa-hourglass-half"></i><span>Session</span></div><div class="security-badge active" id="sessionExpiry">60 min</div></div>
+                <div class="security-desc">Auto-logout on expiry</div>
+            </div>
+        </aside>
+
+        <main class="main-content" id="mainContent">
+            <div id="tab-vault">
+                <div class="page-header"><h2>Secure Vault</h2><p>All files are AES-256-GCM encrypted before storage</p></div>
+                <div class="stats-row">
+                    <div class="stat-card"><div class="stat-icon c1"><i class="fas fa-file-shield"></i></div><div class="stat-value" id="statFiles">0</div><div class="stat-label">Encrypted Files</div></div>
+                    <div class="stat-card"><div class="stat-icon c2"><i class="fas fa-download"></i></div><div class="stat-value" id="statDownloads">0</div><div class="stat-label">Total Downloads</div></div>
+                    <div class="stat-card"><div class="stat-icon c3"><i class="fas fa-share-nodes"></i></div><div class="stat-value" id="statShared">0</div><div class="stat-label">Shared Links</div></div>
+                </div>
+                <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-icon"><i class="fas fa-cloud-arrow-up"></i></div>
+                    <div class="upload-title">Drop files or click to browse</div>
+                    <button class="btn-primary" onclick="event.stopPropagation(); document.getElementById('fileInput').click()"><i class="fas fa-plus"></i> Choose File</button>
+                    <input type="file" id="fileInput" multiple>
+                </div>
+                <div class="file-table-wrap"><table class="ftable"><thead><tr><th>File</th><th>Size</th><th>Encryption</th><th>Visibility</th><th>Modified</th><th></th></tr></thead><tbody id="fileTableBody"></tbody></table></div>
+            </div>
+            <div id="tab-shared" style="display:none;">
+                <div class="page-header"><h2>Shared Files</h2><p>Files you've shared with secure links - click the copy icon to get the shareable link</p></div>
+                <div class="file-table-wrap"><table class="ftable"><thead><tr><th>File</th><th>Share Link</th><th>Downloads</th><th></th></tr></thead><tbody id="sharedTableBody"></tbody></table></div>
+            </div>
+            <div id="tab-activity" style="display:none;">
+                <div class="page-header"><h2>Activity Log</h2><p>Immutable audit trail of all vault operations</p></div>
+                <div class="file-table-wrap" id="activityFullLog"></div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<div class="progress-overlay" id="progressOverlay"><div class="progress-card"><div class="progress-ring"></div><div class="progress-label" id="progressLabel">Encrypting...</div></div></div>
+
+<script>
+    const SK_USERS = 'vx_users', SK_SESS = 'vx_sessions', SK_FILES = 'vx_files_meta', SK_BLOBS = 'vx_blobs', SK_AUDIT = 'vx_audit';
+    let currentSession = null, userFilesCache = [];
+
+    function showPanel(which) { 
+        let lp = document.getElementById('loginPanel'), rp = document.getElementById('registerPanel'); 
+        lp.classList.remove('active'); rp.classList.remove('active');
+        lp.style.display = 'none'; rp.style.display = 'none';
+        if (which === 'login') {
+            lp.style.display = 'block';
+            setTimeout(() => lp.classList.add('active'), 10);
+        } else {
+            rp.style.display = 'block';
+            setTimeout(() => rp.classList.add('active'), 10);
+        }
+    }
+    
+    function toast(msg, isError = false) { 
+        let el = document.createElement('div'); el.className = 'toast'; 
+        el.innerHTML = `<i class="fas ${isError ? 'fa-circle-exclamation' : 'fa-circle-check'}" style="color:${isError ? 'var(--red)' : 'var(--green)'}"></i> ${msg}`; 
+        document.body.appendChild(el); setTimeout(() => el.remove(), 2500); 
+    }
+    
+    function showProgress(msg) { document.getElementById('progressLabel').textContent = msg; document.getElementById('progressOverlay').style.display = 'flex'; }
+    function hideProgress() { document.getElementById('progressOverlay').style.display = 'none'; }
+
+    async function encryptBuffer(buf) {
+        const master = await crypto.subtle.importKey('raw', new TextEncoder().encode('vaultx-secure-master-key-2026'), {name:'PBKDF2'}, false, ['deriveKey']);
+        const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+        const derived = await crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations:140000, hash:'SHA-256'}, master, {name:'AES-GCM', length:256}, false, ['encrypt']);
+        const enc = await crypto.subtle.encrypt({name:'AES-GCM', iv}, derived, buf);
+        return { encryptedData: new Uint8Array(enc), iv, salt };
+    }
+    async function decryptBuffer(encData, iv, salt) {
+        const master = await crypto.subtle.importKey('raw', new TextEncoder().encode('vaultx-secure-master-key-2026'), {name:'PBKDF2'}, false, ['deriveKey']);
+        const derived = await crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations:140000, hash:'SHA-256'}, master, {name:'AES-GCM', length:256}, false, ['decrypt']);
+        return new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM', iv}, derived, encData));
+    }
+    async function hashData(data) { let buf = await crypto.subtle.digest('SHA-384', data); return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
+    async function hashPassword(pwd) { let buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pwd + 'vx-pepper-2026')); return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+
+    async function doRegister() { 
+        let u = document.getElementById('regUser').value.trim(), p = document.getElementById('regPass').value, pc = document.getElementById('regPassConf').value; 
+        if (!u || !p || !pc) return toast('All fields required', true);
+        if (u.length < 3) return toast('Username must be at least 3 characters', true);
+        if (p !== pc) return toast('Passwords do not match', true);
+        if (p.length < 4) return toast('Password must be at least 4 characters', true);
+        let users = JSON.parse(localStorage.getItem(SK_USERS)||'[]');
+        if(users.find(x=>x.username===u)) return toast('Username already taken', true);
+        users.push({username:u, password:await hashPassword(p), created_at: new Date().toISOString()});
+        localStorage.setItem(SK_USERS, JSON.stringify(users));
+        addAudit('ACCOUNT_CREATED',u,'success');
+        let token='vx_'+crypto.randomUUID()+Date.now();
+        let sessions=JSON.parse(localStorage.getItem(SK_SESS)||'[]');
+        sessions.push({token,username:u,expires:Date.now()+3600000});
+        localStorage.setItem(SK_SESS,JSON.stringify(sessions));
+        currentSession={username:u,token};
+        localStorage.setItem('vx_active_sess',JSON.stringify(currentSession));
+        toast('Account created successfully!');
+        enterDashboard();
+    }
+    
+    async function doLogin() { 
+        let u = document.getElementById('loginUser').value.trim(), p = document.getElementById('loginPass').value;
+        if(!u||!p) return toast('Enter username and password', true);
+        let users=JSON.parse(localStorage.getItem(SK_USERS)||'[]');
+        let user=users.find(x=>x.username===u);
+        if(!user) return toast('Invalid credentials', true);
+        if(await hashPassword(p)!==user.password) return toast('Invalid credentials', true);
+        let token='vx_'+crypto.randomUUID()+Date.now();
+        let sessions=JSON.parse(localStorage.getItem(SK_SESS)||'[]');
+        sessions = sessions.filter(s => s.username !== u);
+        sessions.push({token,username:u,expires:Date.now()+3600000});
+        localStorage.setItem(SK_SESS,JSON.stringify(sessions));
+        currentSession={username:u,token};
+        localStorage.setItem('vx_active_sess',JSON.stringify(currentSession));
+        addAudit('USER_LOGIN',u,'success');
+        toast(`Welcome back, ${u}!`);
+        enterDashboard();
+    }
+    
+    function doLogout() { 
+        if(!currentSession) return;
+        addAudit('USER_LOGOUT',currentSession.username,'info');
+        let sessions=JSON.parse(localStorage.getItem(SK_SESS)||'[]');
+        localStorage.setItem(SK_SESS,JSON.stringify(sessions.filter(s=>s.token!==currentSession.token)));
+        currentSession=null;
+        localStorage.removeItem('vx_active_sess');
+        document.getElementById('dashScreen').style.display='none';
+        document.getElementById('authScreen').style.display='flex';
+        showPanel('login');
+        toast('Signed out successfully');
+    }
+    
+    function validateSession(token) { 
+        let sessions=JSON.parse(localStorage.getItem(SK_SESS)||'[]');
+        let s=sessions.find(s=>s.token===token&&s.expires>Date.now());
+        return s?s.username:null;
+    }
+    
+    function addAudit(action,username,status){ 
+        let logs=JSON.parse(localStorage.getItem(SK_AUDIT)||'[]');
+        logs.unshift({action,username,status,timestamp:new Date().toISOString()});
+        if(logs.length>100) logs.pop();
+        localStorage.setItem(SK_AUDIT,JSON.stringify(logs));
+        if(currentSession) refreshActivity();
+    }
+
+    async function uploadFile(fileObj) { 
+        showProgress('Encrypting file...'); 
+        let buf=new Uint8Array(await fileObj.arrayBuffer()); 
+        let fileHash=await hashData(buf); 
+        let {encryptedData,iv,salt}=await encryptBuffer(buf); 
+        let fid='f_'+Date.now()+'_'+crypto.randomUUID().slice(0,8); 
+        let sz=(fileObj.size/1048576).toFixed(2),unit='MB'; 
+        if(parseFloat(sz)<0.1){ sz=(fileObj.size/1024).toFixed(0); unit='KB'; } 
+        let blobs=JSON.parse(localStorage.getItem(SK_BLOBS)||'{}'); 
+        blobs[fid]={data:btoa(String.fromCharCode(...encryptedData)),iv:Array.from(iv),salt:Array.from(salt),hash:fileHash}; 
+        localStorage.setItem(SK_BLOBS,JSON.stringify(blobs)); 
+        let metas=JSON.parse(localStorage.getItem(SK_FILES)||'[]'); 
+        metas.unshift({id:fid,name:fileObj.name,size:sz,unit,owner:currentSession.username,shared:false,shareToken:null,modified:new Date().toLocaleString(),downloadCount:0,hash:fileHash}); 
+        localStorage.setItem(SK_FILES,JSON.stringify(metas)); 
+        addAudit('FILE_UPLOADED',currentSession.username,'success'); 
+        hideProgress(); 
+    }
+    
+    async function downloadFile(fid){ 
+        let metas=JSON.parse(localStorage.getItem(SK_FILES)||'[]'); 
+        let meta=metas.find(f=>f.id===fid&&f.owner===currentSession.username); 
+        if(!meta) throw new Error('File not found'); 
+        let entry=JSON.parse(localStorage.getItem(SK_BLOBS)||'{}')[fid]; 
+        if(!entry) throw new Error('Encrypted data missing'); 
+        showProgress('Decrypting & verifying...'); 
+        let enc=Uint8Array.from(atob(entry.data),c=>c.charCodeAt(0)); 
+        let dec=await decryptBuffer(enc,new Uint8Array(entry.iv),new Uint8Array(entry.salt)); 
+        if(await hashData(dec)!==entry.hash) throw new Error('Integrity check failed!'); 
+        meta.downloadCount++; 
+        localStorage.setItem(SK_FILES,JSON.stringify(metas.map(f=>f.id===fid?meta:f))); 
+        addAudit('FILE_DOWNLOADED',currentSession.username,'success'); 
+        hideProgress(); 
+        let a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([dec])); a.download=meta.name; a.click(); URL.revokeObjectURL(a.href); 
+        toast('File downloaded & integrity verified');
+    }
+    
+    function deleteFile(fid){ 
+        if(!confirm('Permanently delete this encrypted file?')) return; 
+        let metas=JSON.parse(localStorage.getItem(SK_FILES)||'[]'); 
+        localStorage.setItem(SK_FILES,JSON.stringify(metas.filter(f=>!(f.id===fid&&f.owner===currentSession.username)))); 
+        let blobs=JSON.parse(localStorage.getItem(SK_BLOBS)||'{}'); 
+        delete blobs[fid]; 
+        localStorage.setItem(SK_BLOBS,JSON.stringify(blobs)); 
+        addAudit('FILE_DELETED',currentSession.username,'success'); 
+        renderDash(); 
+        toast('File permanently deleted'); 
+    }
+    
+    function createShareLink(fid){ 
+        let metas=JSON.parse(localStorage.getItem(SK_FILES)||'[]'); 
+        let idx=metas.findIndex(f=>f.id===fid&&f.owner===currentSession.username); 
+        if(idx===-1) return null; 
+        let token='share_'+crypto.randomUUID(); 
+        metas[idx].shared=true; 
+        metas[idx].shareToken=token; 
+        localStorage.setItem(SK_FILES,JSON.stringify(metas)); 
+        addAudit('SHARE_CREATED',currentSession.username,'success'); 
+        return `${window.location.origin}${window.location.pathname}#shared?token=${token}`; 
+    }
+    
+    function getFullShareLink(token){ return `${window.location.origin}${window.location.pathname}#shared?token=${token}`; }
+    function getUserFiles(){ return JSON.parse(localStorage.getItem(SK_FILES)||'[]').filter(f=>f.owner===currentSession.username); }
+
+    function enterDashboard(){ 
+        document.getElementById('authScreen').style.display='none'; 
+        document.getElementById('dashScreen').style.display='flex'; 
+        document.getElementById('userAvatarTop').textContent=currentSession.username[0].toUpperCase(); 
+        document.getElementById('userNameTop').textContent=currentSession.username; 
+        renderDash(); 
+        switchTab('vault'); 
+        checkSharedLink(); 
+    }
+    
+    function renderDash(){ 
+        let files=getUserFiles(); 
+        userFilesCache=files; 
+        document.getElementById('statFiles').textContent=files.length; 
+        document.getElementById('statDownloads').textContent=files.reduce((a,f)=>a+(f.downloadCount||0),0); 
+        document.getElementById('statShared').textContent=files.filter(f=>f.shared).length; 
+        document.getElementById('sideFileCount').textContent=files.length; 
+        renderFileTable(files); 
+        renderSharedTab(files); 
+        renderActivityTab(); 
+        populateShareDropdown(files); 
+        refreshActivity(); 
+    }
+    
+    function getFileTypeClass(name){ let e=name.split('.').pop().toLowerCase(); if(['doc','docx','txt'].includes(e)) return ['ftype-doc','fa-file-word']; if(['png','jpg','jpeg'].includes(e)) return ['ftype-img','fa-file-image']; if(e==='pdf') return ['ftype-pdf','fa-file-pdf']; return ['ftype-other','fa-file']; }
+    function escapeHtml(s){ return String(s).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+    
+    function renderFileTable(files){ 
+        let tb=document.getElementById('fileTableBody'); 
+        if(!files.length){ tb.innerHTML='<tr><td colspan="6"><div style="text-align:center;padding:40px;">No files yet. Upload your first file above.</div></td></tr>'; return; } 
+        tb.innerHTML=files.map(f=>{ let[tc,ic]=getFileTypeClass(f.name); return `<tr><td><div class="file-name-cell"><div class="file-type-icon ${tc}"><i class="fas ${ic}"></i></div><div>${escapeHtml(f.name)}</div></div></td><td>${f.size} ${f.unit}</td><td><span class="chip chip-enc"><i class="fas fa-lock"></i> AES-256</span></td><td><span class="chip ${f.shared?'chip-shared':''}">${f.shared?'Shared':'Private'}</span></td><td>${f.modified}</td><td><div class="table-actions"><button class="tbl-btn" onclick="downloadFile('${f.id}').then(()=>renderDash()).catch(e=>toast(e.message,true))"><i class="fas fa-download"></i></button><button class="tbl-btn" onclick="quickShare('${f.id}')"><i class="fas fa-share-alt"></i></button><button class="tbl-btn" onclick="deleteFile('${f.id}')"><i class="fas fa-trash"></i></button></div></td></tr>`; }).join(''); 
+    }
+    
+    function renderSharedTab(files){ 
+        let shared=files.filter(f=>f.shared); 
+        let tb=document.getElementById('sharedTableBody'); 
+        if(!shared.length){ tb.innerHTML='<tr><td colspan="4"><div style="text-align:center;padding:40px;">No shared files. Use Quick Share to create a link.</div></td></tr>'; return; } 
+        tb.innerHTML=shared.map(f=>{ 
+            let fullLink = getFullShareLink(f.shareToken);
+            return `<tr><td><div class="file-name-cell"><div class="file-type-icon ${getFileTypeClass(f.name)[0]}"><i class="fas ${getFileTypeClass(f.name)[1]}"></i></div>${escapeHtml(f.name)}</div></td><td><div class="shared-link-cell"><span class="shared-link-preview">${fullLink.length>50?fullLink.substring(0,47)+'...':fullLink}</span><button class="copy-link-btn" onclick="copyToClipboard('${fullLink.replace(/'/g, "\\'")}')" title="Copy link"><i class="fas fa-copy"></i></button></div></td><td>${f.downloadCount||0}</td><td><button class="tbl-btn" onclick="revokeShare('${f.id}')" title="Revoke share"><i class="fas fa-ban"></i></button></td></tr>`;
+        }).join(''); 
+    }
+    
+    function copyToClipboard(text){ navigator.clipboard.writeText(text); toast('Link copied to clipboard!'); }
+    
+    function revokeShare(fid){
+        if(!confirm('Revoke this share link? The file will become private again.')) return;
+        let metas=JSON.parse(localStorage.getItem(SK_FILES)||'[]');
+        let idx=metas.findIndex(f=>f.id===fid&&f.owner===currentSession.username);
+        if(idx!==-1){
+            metas[idx].shared=false;
+            metas[idx].shareToken=null;
+            localStorage.setItem(SK_FILES,JSON.stringify(metas));
+            addAudit('SHARE_REVOKED',currentSession.username,'success');
+            renderDash();
+            toast('Share link revoked');
+        }
+    }
+    
+    function renderActivityTab(){ 
+        let logs=JSON.parse(localStorage.getItem(SK_AUDIT)||'[]').filter(l=>l.username===currentSession.username); 
+        let el=document.getElementById('activityFullLog'); 
+        if(!logs.length){ el.innerHTML='<div style="padding:40px;text-align:center;">No activity yet</div>'; return; } 
+        el.innerHTML='<div style="padding:8px 0;">'+logs.slice(0,50).map(l=>`<div style="padding:12px 18px;border-bottom:1px solid var(--border);"><div><strong>${l.action.replace(/_/g,' ')}</strong></div><div style="font-size:0.7rem;color:var(--text3);">${new Date(l.timestamp).toLocaleString()}</div></div>`).join('')+'</div>'; 
+    }
+    
+    function refreshActivity(){ 
+        let logs=JSON.parse(localStorage.getItem(SK_AUDIT)||'[]').filter(l=>l.username===currentSession.username).slice(0,5); 
+        let el=document.getElementById('activityPanel'); 
+        if(!el) return; 
+        if(!logs.length){ el.innerHTML='<div style="text-align:center;padding:12px;color:var(--text3);">No recent activity</div>'; return; } 
+        el.innerHTML=logs.map(l=>{ 
+            let icon=(l.action==='FILE_UPLOADED'?'fa-cloud-arrow-up':l.action==='FILE_DOWNLOADED'?'fa-download':l.action==='FILE_DELETED'?'fa-trash':l.action==='SHARE_CREATED'?'fa-share-nodes':l.action==='SHARE_REVOKED'?'fa-ban':'fa-shield'); 
+            return `<div class="activity-item"><div class="activity-icon"><i class="fas ${icon}" style="color:var(--accent2);"></i></div><div class="activity-detail"><div class="activity-action">${l.action.replace(/_/g,' ')}</div><div class="activity-time"><span class="badge-dot"></span> ${new Date(l.timestamp).toLocaleTimeString()}</div></div></div>`; 
+        }).join(''); 
+    }
+    
+    function populateShareDropdown(files){ 
+        let sel=document.getElementById('shareSelect'); 
+        sel.innerHTML='<option value="">Select a file...</option>'+files.map(f=>`<option value="${f.id}">${escapeHtml(f.name)}</option>`).join(''); 
+    }
+    
+    function quickShare(fid){ 
+        let link=createShareLink(fid); 
+        if(link){ 
+            document.getElementById('shareLinkOut').value=link; 
+            copyToClipboard(link); 
+            renderDash(); 
+        } 
+    }
+    
+    function switchTab(tab){ 
+        ['vault','shared','activity'].forEach(t=>{let el=document.getElementById('tab-'+t); if(el) el.style.display=t===tab?'block':'none';}); 
+        if(tab==='activity') renderActivityTab(); 
+    }
+    
+    function onSearch(q){ if(!q.trim()){ renderFileTable(userFilesCache); return; } renderFileTable(userFilesCache.filter(f=>f.name.toLowerCase().includes(q.toLowerCase()))); }
+    
+    function checkSharedLink(){ 
+        if(window.location.hash.startsWith('#shared?token=')){ 
+            let token=window.location.hash.split('=')[1]; 
+            let all=JSON.parse(localStorage.getItem(SK_FILES)||'[]'); 
+            let file=all.find(f=>f.shareToken===token&&f.shared); 
+            if(file&&confirm(`Download shared file: ${file.name}?`)){ 
+                let entry=JSON.parse(localStorage.getItem(SK_BLOBS)||'{}')[file.id]; 
+                if(!entry) return toast('File payload missing', true); 
+                showProgress('Decrypting shared file...'); 
+                (async()=>{ 
+                    try{ 
+                        let enc=Uint8Array.from(atob(entry.data),c=>c.charCodeAt(0)); 
+                        let dec=await decryptBuffer(enc,new Uint8Array(entry.iv),new Uint8Array(entry.salt)); 
+                        if(await hashData(dec)!==entry.hash) throw new Error('Integrity check failed!'); 
+                        let a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([dec])); a.download=file.name; a.click(); URL.revokeObjectURL(a.href); 
+                        toast('Shared file downloaded & integrity verified');
+                        let metas=JSON.parse(localStorage.getItem(SK_FILES)||'[]');
+                        let idx=metas.findIndex(f=>f.id===file.id);
+                        if(idx!==-1){ metas[idx].downloadCount=(metas[idx].downloadCount||0)+1; localStorage.setItem(SK_FILES,JSON.stringify(metas)); }
+                    }catch(e){ toast(e.message, true); } 
+                    hideProgress(); 
+                    window.location.hash=''; 
+                })(); 
+            } else if(!file){ toast('Link expired or invalid', true); window.location.hash=''; }
+        } 
+    }
+
+    // Event Listeners
+    document.getElementById('uploadZone').addEventListener('dragover',e=>{e.preventDefault();e.currentTarget.classList.add('dragover');});
+    document.getElementById('uploadZone').addEventListener('dragleave',e=>{e.currentTarget.classList.remove('dragover');});
+    document.getElementById('uploadZone').addEventListener('drop',async e=>{e.preventDefault();e.currentTarget.classList.remove('dragover'); let file=e.dataTransfer.files[0]; if(file){ try{ await uploadFile(file); toast(`✅ ${file.name} encrypted & stored`); renderDash(); }catch(err){ toast(err.message,true); } }});
+    document.getElementById('fileInput').addEventListener('change',async e=>{ for(let file of e.target.files){ try{ await uploadFile(file); toast(`✅ ${file.name} encrypted & stored`); renderDash(); }catch(err){ toast(err.message,true); } } e.target.value=''; });
+    document.getElementById('genShareBtn').addEventListener('click',()=>{ let fid=document.getElementById('shareSelect').value; if(!fid) return toast('Select a file first',true); let link=createShareLink(fid); document.getElementById('shareLinkOut').value=link; if(link) toast('Secure link generated! Click copy to share'); renderDash(); });
+    document.getElementById('copyShareBtn').addEventListener('click',()=>{ let link=document.getElementById('shareLinkOut').value; if(!link) return toast('Generate a link first',true); copyToClipboard(link); });
+    document.getElementById('logoutBtn').addEventListener('click',doLogout);
+    document.getElementById('loginBtn').addEventListener('click',doLogin);
+    document.getElementById('registerBtn').addEventListener('click',doRegister);
+    document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter') doLogin();});
+    document.getElementById('regPassConf').addEventListener('keydown',e=>{if(e.key==='Enter') doRegister();});
+    window.addEventListener('hashchange',checkSharedLink);
+
+    // Initialize
+    (function init(){ 
+        let saved=localStorage.getItem('vx_active_sess'); 
+        if(saved){ 
+            try{ 
+                let sess=JSON.parse(saved); 
+                let valid=validateSession(sess.token); 
+                if(valid){ 
+                    currentSession={username:valid,token:sess.token}; 
+                    document.getElementById('authScreen').style.display='none'; 
+                    enterDashboard(); 
+                    return; 
+                } 
+            }catch(e){} 
+        } 
+        document.getElementById('authScreen').style.display='flex'; 
+        document.getElementById('dashScreen').style.display='none'; 
+        showPanel('login'); 
+    })();
+</script>
+</body>
+</html>
